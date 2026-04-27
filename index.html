@@ -16,6 +16,7 @@
             height: 100%;
             object-fit: cover;
             z-index: 1;
+            transform: scaleX(-1);
         }
         #ar-overlay {
             position: fixed;
@@ -23,8 +24,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 2;
-            pointer-events: none;
+            z-index: 3;
+            pointer-events: auto;
         }
         #loading-screen {
             position: fixed;
@@ -247,17 +248,36 @@
 
             async startCamera() {
                 try {
+                    console.log('Requesting camera access...');
                     const stream = await navigator.mediaDevices.getUserMedia({ 
                         video: { 
                             facingMode: 'environment',
-                            width: { ideal: 1920 },
-                            height: { ideal: 1080 }
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
                         } 
                     });
+                    
                     this.cameraVideo.srcObject = stream;
-                    console.log('Camera started successfully');
+                    
+                    // Wait for video to be ready
+                    await new Promise((resolve) => {
+                        this.cameraVideo.onloadedmetadata = () => {
+                            this.cameraVideo.play();
+                            console.log('Camera started successfully');
+                            resolve();
+                        };
+                    });
+                    
                 } catch (error) {
                     console.error('Camera access error:', error);
+                    
+                    if (error.name === 'NotAllowedError') {
+                        this.showError('📷 Camera permission denied. Please allow camera access and refresh.');
+                    } else if (error.name === 'NotFoundError') {
+                        this.showError('📷 No camera found. Please connect a camera and refresh.');
+                    } else {
+                        this.showError('📷 Camera error: ' + error.message);
+                    }
                     throw error;
                 }
             }
@@ -312,9 +332,13 @@
                 let isDragging = false;
                 let previousMousePosition = { x: 0, y: 0 };
 
+                // Make overlay interactive
+                this.arOverlay.style.pointerEvents = 'auto';
+
                 this.menuCard.addEventListener('mousedown', (event) => {
                     isDragging = true;
                     previousMousePosition = { x: event.clientX, y: event.clientY };
+                    event.preventDefault();
                 });
 
                 document.addEventListener('mousemove', (event) => {
@@ -339,7 +363,9 @@
 
                 // Mouse wheel for zoom
                 document.addEventListener('wheel', (event) => {
-                    if (event.target === this.menuCard) {
+                    const rect = this.menuCard.getBoundingClientRect();
+                    if (event.clientX >= rect.left && event.clientX <= rect.right &&
+                        event.clientY >= rect.top && event.clientY <= rect.bottom) {
                         event.preventDefault();
                         const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1;
                         this.zoomMenuCard(zoomFactor);
