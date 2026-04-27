@@ -17,6 +17,7 @@
             object-fit: cover;
             z-index: 1;
             transform: scaleX(-1);
+            display: block;
         }
         #ar-overlay {
             position: fixed;
@@ -26,6 +27,10 @@
             height: 100%;
             z-index: 3;
             pointer-events: auto;
+            background: transparent;
+        }
+        #scene {
+            background: transparent !important;
         }
         #loading-screen {
             position: fixed;
@@ -152,7 +157,7 @@
     <div id="ar-overlay">
         <a-scene
             vr-mode-ui="enabled: false"
-            renderer="logarithmicDepthBuffer: true; colorManagement: true; antialias: true; transparent: true;"
+            renderer="logarithmicDepthBuffer: true; colorManagement: true; antialias: true; transparent: true; alpha: true;"
             background="color: transparent"
             fog="type: linear; color: transparent; near: 0; far: 20"
             id="scene"
@@ -220,8 +225,14 @@
 
             async init() {
                 try {
-                    // Start camera feed first
+                    // Start camera feed first with immediate request
+                    console.log('Initializing AR Menu...');
+                    this.showError('📷 Requesting camera access...');
+                    
                     await this.startCamera();
+                    
+                    // Clear error message after camera starts
+                    this.errorMessage.style.display = 'none';
                     
                     // Check WebXR support
                     if ('xr' in navigator) {
@@ -238,35 +249,59 @@
                     setTimeout(() => {
                         this.loadingScreen.classList.add('hidden');
                         this.updateHint();
-                    }, 2000);
+                    }, 1000);
 
                 } catch (error) {
                     console.error('Initialization error:', error);
-                    this.showError('Camera access denied. Please allow camera permission.');
+                    this.loadingScreen.classList.add('hidden');
                 }
             }
 
             async startCamera() {
                 try {
                     console.log('Requesting camera access...');
-                    const stream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { 
-                            facingMode: 'environment',
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
-                        } 
-                    });
+                    
+                    // Force camera request with user-facing camera first
+                    let stream;
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({ 
+                            video: { 
+                                facingMode: 'environment',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            } 
+                        });
+                    } catch (envError) {
+                        console.log('Environment camera failed, trying user camera...');
+                        stream = await navigator.mediaDevices.getUserMedia({ 
+                            video: { 
+                                facingMode: 'user',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            } 
+                        });
+                    }
                     
                     this.cameraVideo.srcObject = stream;
                     
+                    // Force video to play
+                    this.cameraVideo.play().catch(e => console.log('Autoplay prevented, will play on interaction'));
+                    
                     // Wait for video to be ready
                     await new Promise((resolve) => {
+                        const timeout = setTimeout(() => {
+                            console.log('Camera timeout, proceeding anyway');
+                            resolve();
+                        }, 3000);
+                        
                         this.cameraVideo.onloadedmetadata = () => {
-                            this.cameraVideo.play();
-                            console.log('Camera started successfully');
+                            clearTimeout(timeout);
+                            console.log('Camera metadata loaded');
                             resolve();
                         };
                     });
+                    
+                    console.log('Camera started successfully');
                     
                 } catch (error) {
                     console.error('Camera access error:', error);
