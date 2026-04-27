@@ -7,7 +7,25 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@handtracking/aframe-handtracking-component@latest/dist/aframe-handtracking-component.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; background: #000; }
+        #camera-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+        #ar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
         #loading-screen {
             position: fixed;
             top: 0; left: 0;
@@ -129,78 +147,59 @@
         WebXR not supported. Please use Chrome/Edge on desktop or Android device.
     </div>
 
-    <a-scene
-        vr-mode-ui="enabled: true"
-        renderer="logarithmicDepthBuffer: true; colorManagement: true; antialias: true;"
-        background="color: #87CEEB"
-        fog="type: linear; color: #87CEEB; near: 0; far: 20"
-        id="scene">
+    <video id="camera-video" autoplay muted></video>
+    <div id="ar-overlay">
+        <a-scene
+            vr-mode-ui="enabled: false"
+            renderer="logarithmicDepthBuffer: true; colorManagement: true; antialias: true; transparent: true;"
+            background="color: transparent"
+            fog="type: linear; color: transparent; near: 0; far: 20"
+            id="scene"
+            embedded>
 
-        <a-assets timeout="10000">
-            <img id="menu-image"
-                src="./menu-image.jpg"
-                crossorigin="anonymous">
-        </a-assets>
+            <a-assets timeout="10000">
+                <img id="menu-image"
+                    src="./menu-image.jpg"
+                    crossorigin="anonymous">
+            </a-assets>
 
-        <!-- Environment -->
-        <a-sky color="#87CEEB"></a-sky>
-        <a-plane position="0 -2 0" rotation="-90 0 0" width="20" height="20" 
-                 color="#4a5568" shadow="receive: true"></a-plane>
+            <!-- Camera with normal zoom -->
+            <a-camera 
+                position="0 0 0"
+                look-controls="enabled: false"
+                cursor="fuse: false; rayOrigin: mouse"
+                active="false">
+            </a-camera>
 
-        <!-- Lighting -->
-        <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
-        <a-light type="directional" position="1 1 1" color="#ffffff" intensity="0.8" 
-                 shadow="cast: true; shadowCameraVisible: false"></a-light>
-        <a-light type="point" position="0 3 0" color="#ffd700" intensity="0.3"></a-light>
+            <!-- Interactive Menu Card -->
+            <a-image
+                id="menu-card"
+                src="#menu-image"
+                position="0 0 -2"
+                width="1.2"
+                height="1.6"
+                rotation="0 0 0"
+                visible="true"
+                transparent="true"
+                animation__hover="property: scale; to: 1.05 1.05 1; startEvents: mouseenter; dur: 200"
+                animation__unhover="property: scale; to: 1 1 1; startEvents: mouseleave; dur: 200"
+                animation__float="property: position; to: 0 0.2 -2; dir: alternate; dur: 3000; easing: easeInOutSine; loop: true">
+            </a-image>
 
-        <!-- Camera with normal zoom -->
-        <a-camera 
-            position="0 1.6 5"
-            look-controls="pointerLockEnabled: false"
-            cursor="fuse: false; rayOrigin: mouse">
-        </a-camera>
+            <!-- Hand gesture indicators -->
+            <a-entity id="gesture-indicator" position="0 1 -2" visible="false">
+                <a-text value="✌️ Peace Gesture Detected!" 
+                        color="#00ff00" 
+                        width="4" 
+                        align="center"
+                        scale="0.5 0.5 0.5"></a-text>
+            </a-entity>
 
-        <!-- Hand tracking components -->
-        <a-entity hand-tracking="hand: left"></a-entity>
-        <a-entity hand-tracking="hand: right"></a-entity>
-
-        <!-- Interactive Menu Card -->
-        <a-image
-            id="menu-card"
-            src="#menu-image"
-            position="0 1.5 -2"
-            width="1.2"
-            height="1.6"
-            rotation="0 0 0"
-            shadow="cast: true; receive: true"
-            animation__hover="property: scale; to: 1.05 1.05 1; startEvents: mouseenter; dur: 200"
-            animation__unhover="property: scale; to: 1 1 1; startEvents: mouseleave; dur: 200"
-            animation__float="property: position; to: 0 1.7 -2; dir: alternate; dur: 3000; easing: easeInOutSine; loop: true">
-        </a-image>
-
-        <!-- Floating particles for effect -->
-        <a-entity id="particles">
-            <a-sphere position="-1 2 -2" radius="0.05" color="#ffd700" 
-                      animation="property: position; to: -1 2.5 -2; dir: alternate; dur: 2000; loop: true"></a-sphere>
-            <a-sphere position="1 1.5 -4" radius="0.03" color="#ff69b4" 
-                      animation="property: position; to: 1 2 -4; dir: alternate; dur: 2500; loop: true"></a-sphere>
-            <a-sphere position="0 1 -5" radius="0.04" color="#00ff00" 
-                      animation="property: position; to: 0 1.8 -5; dir: alternate; dur: 3000; loop: true"></a-sphere>
-        </a-entity>
-
-        <!-- Hand gesture indicators -->
-        <a-entity id="gesture-indicator" position="0 2.5 -2" visible="false">
-            <a-text value="✌️ Peace Gesture Detected!" 
-                    color="#00ff00" 
-                    width="4" 
-                    align="center"
-                    scale="0.5 0.5 0.5"></a-text>
-        </a-entity>
-
-    </a-scene>
+        </a-scene>
+    </div>
 
     <script>
-        // WebXR and Hand Tracking Controller
+        // WebXR and Hand Tracking Controller with Camera
         class ARMenuController {
             constructor() {
                 this.scene = document.querySelector('#scene');
@@ -209,6 +208,8 @@
                 this.errorMessage = document.querySelector('#error-message');
                 this.gestureIndicator = document.querySelector('#gesture-indicator');
                 this.hint = document.querySelector('#hint');
+                this.cameraVideo = document.querySelector('#camera-video');
+                this.arOverlay = document.querySelector('#ar-overlay');
                 
                 this.isWebXRSupported = false;
                 this.isHandTrackingSupported = false;
@@ -218,15 +219,13 @@
 
             async init() {
                 try {
+                    // Start camera feed first
+                    await this.startCamera();
+                    
                     // Check WebXR support
                     if ('xr' in navigator) {
                         this.isWebXRSupported = await navigator.xr.isSessionSupported('immersive-vr');
-                        if (this.isWebXRSupported) {
-                            console.log('WebXR VR supported');
-                        }
-                        
-                        this.isHandTrackingSupported = await navigator.xr.isSessionSupported('immersive-vr');
-                        console.log('Hand tracking support checked');
+                        console.log('WebXR VR supported:', this.isWebXRSupported);
                     }
 
                     // Initialize scene
@@ -242,7 +241,24 @@
 
                 } catch (error) {
                     console.error('Initialization error:', error);
-                    this.showError('AR initialization failed. Please refresh and try again.');
+                    this.showError('Camera access denied. Please allow camera permission.');
+                }
+            }
+
+            async startCamera() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: 'environment',
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 }
+                        } 
+                    });
+                    this.cameraVideo.srcObject = stream;
+                    console.log('Camera started successfully');
+                } catch (error) {
+                    console.error('Camera access error:', error);
+                    throw error;
                 }
             }
 
@@ -359,7 +375,7 @@
             }
 
             resetMenuCard() {
-                this.menuCard.setAttribute('position', '0 1.5 -2');
+                this.menuCard.setAttribute('position', '0 0 -2');
                 this.menuCard.setAttribute('rotation', '0 0 0');
                 this.menuCard.setAttribute('scale', '1 1 1');
             }
@@ -379,11 +395,7 @@
             }
 
             updateHint() {
-                if (this.isWebXRSupported) {
-                    this.hint.textContent = '🥽 Click VR button for immersive experience!';
-                } else {
-                    this.hint.textContent = '📋 Menu dekh rahe ho! 🖱️ Drag to move, scroll to zoom!';
-                }
+                this.hint.textContent = '📋 Menu dekh rahe ho! 🖱️ Drag to move, scroll to zoom!';
             }
 
             showError(message) {
