@@ -14,13 +14,10 @@
             background-color: #000;
             font-family: Arial, sans-serif;
         }
-
         #loading-screen {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background-color: #000;
             display: flex;
             flex-direction: column;
@@ -29,45 +26,34 @@
             z-index: 9999;
             transition: opacity 0.5s ease;
         }
-
         #loading-screen.hidden {
             opacity: 0;
             pointer-events: none;
         }
-
         #loading-text {
             color: #fff;
             font-size: 24px;
             text-align: center;
-            margin-bottom: 30px;
+            margin-top: 30px;
             padding: 0 20px;
         }
-
         .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255, 255, 255, 0.3);
+            width: 50px; height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
             border-top-color: #fff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
+        @keyframes spin { to { transform: rotate(360deg); } }
         a-scene {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
         }
     </style>
 </head>
 <body>
+
     <div id="loading-screen">
         <div class="spinner"></div>
         <div id="loading-text">📷 Camera ko Menu Card pe point karo</div>
@@ -78,20 +64,22 @@
         vr-mode-ui="enabled: false"
         device-orientation-permission-ui="enabled: false"
         renderer="colorManagement: true;">
-        
+
         <a-assets>
-            <img id="menu-image" src="./assets/menu-image.jpg" crossorigin="anonymous">
+            <!-- ✅ FIX 1: path changed from ./assets/menu-image.jpg to ./menu-image.jpg -->
+            <img id="menu-image" src="./menu-image.jpg" crossorigin="anonymous">
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <a-entity id="target-0" mindar-image-target="targetIndex: 0">
+        <a-entity mindar-image-target="targetIndex: 0">
             <a-image
                 src="#menu-image"
                 width="1"
                 height="1.4"
                 position="0 0 0"
-                rotation="-90 0 0">
+                rotation="0 0 0">
+                <!-- ✅ FIX 2: rotation was -90 0 0 (image flat pe gir rahi thi), ab 0 0 0 -->
             </a-image>
         </a-entity>
 
@@ -102,28 +90,17 @@
             const loadingScreen = document.getElementById('loading-screen');
             const scene = document.querySelector('a-scene');
 
-            // Hide loading screen when AR is ready
             scene.addEventListener('arReady', () => {
-                console.log('AR is ready!');
                 loadingScreen.classList.add('hidden');
             });
-
-            // Handle AR errors
-            scene.addEventListener('arError', (error) => {
-                console.error('AR Error:', error);
+            scene.addEventListener('arError', () => {
                 document.getElementById('loading-text').textContent = '❌ Camera access denied. Please allow camera permission.';
             });
-
-            // Handle camera permission
-            scene.addEventListener('arCameraPermissionGranted', () => {
-                console.log('Camera permission granted');
-            });
-
             scene.addEventListener('arCameraPermissionRefused', () => {
-                console.log('Camera permission refused');
                 document.getElementById('loading-text').textContent = '❌ Camera permission required. Please refresh and allow camera access.';
             });
         });
     </script>
+
 </body>
 </html>
