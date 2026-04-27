@@ -2,41 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AR Menu - MindAR.js</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Menu</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: #000;
-            font-family: Arial, sans-serif;
-        }
+        body { margin: 0; overflow: hidden; }
         #loading-screen {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background-color: #000;
+            background: #000;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 9999;
-            transition: opacity 0.5s ease;
+            transition: opacity 0.5s;
         }
-        #loading-screen.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-        #loading-text {
-            color: #fff;
-            font-size: 24px;
-            text-align: center;
-            margin-top: 30px;
-            padding: 0 20px;
-        }
+        #loading-screen.hidden { opacity: 0; pointer-events: none; }
         .spinner {
             width: 50px; height: 50px;
             border: 5px solid rgba(255,255,255,0.3);
@@ -45,10 +29,25 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        a-scene {
+        #loading-text {
+            color: #fff;
+            font-size: 20px;
+            text-align: center;
+            margin-top: 20px;
+            padding: 0 30px;
+        }
+        #hint {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 999;
+            text-align: center;
         }
     </style>
 </head>
@@ -56,49 +55,46 @@
 
     <div id="loading-screen">
         <div class="spinner"></div>
-        <div id="loading-text">📷 Camera ko Menu Card pe point karo</div>
+        <div id="loading-text">📷 Camera load ho raha hai...</div>
     </div>
 
-    <a-scene
-        mindar-image="imageTargetSrc: ./targets.mind; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001;"
-        vr-mode-ui="enabled: false"
-        device-orientation-permission-ui="enabled: false"
-        renderer="colorManagement: true;">
+    <div id="hint">📋 Menu dekh rahe ho! Ghoomao aur zoom karo!</div>
 
-        <a-assets>
-            <!-- ✅ FIX 1: path changed from ./assets/menu-image.jpg to ./menu-image.jpg -->
-            <img id="menu-image" src="./menu-image.jpg" crossorigin="anonymous">
+    <a-scene
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false;"
+        vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true; colorManagement: true;"
+        id="scene">
+
+        <a-assets timeout="10000">
+            <img id="menu-image"
+                src="https://raw.githubusercontent.com/UmangGhoghari/mine-insta-AR/main/menu-image.jpg"
+                crossorigin="anonymous">
         </a-assets>
 
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-camera
+            gps-camera
+            rotation-reader>
+        </a-camera>
 
-        <a-entity mindar-image-target="targetIndex: 0">
-            <a-image
-                src="#menu-image"
-                width="1"
-                height="1.4"
-                position="0 0 0"
-                rotation="0 0 0">
-                <!-- ✅ FIX 2: rotation was -90 0 0 (image flat pe gir rahi thi), ab 0 0 0 -->
-            </a-image>
-        </a-entity>
+        <!-- Menu card hawa mein float karega — camera ke 2 meter saamne -->
+        <a-image
+            src="#menu-image"
+            position="0 0 -2"
+            width="1.6"
+            height="2.2"
+            rotation="0 0 0"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear">
+        </a-image>
 
     </a-scene>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const loadingScreen = document.getElementById('loading-screen');
-            const scene = document.querySelector('a-scene');
-
-            scene.addEventListener('arReady', () => {
-                loadingScreen.classList.add('hidden');
-            });
-            scene.addEventListener('arError', () => {
-                document.getElementById('loading-text').textContent = '❌ Camera access denied. Please allow camera permission.';
-            });
-            scene.addEventListener('arCameraPermissionRefused', () => {
-                document.getElementById('loading-text').textContent = '❌ Camera permission required. Please refresh and allow camera access.';
-            });
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loading-screen').classList.add('hidden');
+            }, 3000);
         });
     </script>
 
