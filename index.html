@@ -3,81 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR Menu - WebXR</title>
+    <title>AR Menu</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #000; width: 100vw; height: 100vh; }
 
-        body {
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-            background: #000;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        /* LAYER 1: Camera video - bottom layer */
         #camera-video {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             object-fit: cover;
             z-index: 1;
-            /* Mirror for front camera feel - remove if using back camera */
-            /* transform: scaleX(-1); */
-            display: block;
-            background: #000;
         }
 
-        /* LAYER 2: A-Frame scene - must be transparent over video */
         a-scene {
             position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
+            top: 0 !important; left: 0 !important;
+            width: 100% !important; height: 100% !important;
             z-index: 2 !important;
             background: transparent !important;
         }
 
-        /* Make A-Frame canvas transparent */
         a-scene canvas {
             background: transparent !important;
             position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            z-index: 2 !important;
+            top: 0 !important; left: 0 !important;
+            width: 100% !important; height: 100% !important;
         }
 
-        /* LAYER 3: UI overlays */
         #loading-screen {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 9999;
-            transition: opacity 0.6s ease;
+            transition: opacity 0.8s ease;
         }
-        #loading-screen.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
+        #loading-screen.hidden { opacity: 0; pointer-events: none; }
 
         .spinner {
-            width: 60px; height: 60px;
-            border: 6px solid rgba(255,255,255,0.3);
-            border-top-color: #fff;
+            width: 70px; height: 70px;
+            border: 5px solid rgba(255,255,255,0.15);
+            border-top-color: #a78bfa;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 24px;
+            margin-bottom: 28px;
+            box-shadow: 0 0 30px rgba(167,139,250,0.4);
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -86,99 +62,48 @@
             font-size: 22px;
             font-weight: bold;
             text-align: center;
-            padding: 0 24px;
             margin-bottom: 10px;
         }
         #loading-subtext {
-            color: rgba(255,255,255,0.8);
-            font-size: 15px;
+            color: rgba(255,255,255,0.5);
+            font-size: 14px;
             text-align: center;
-            padding: 0 24px;
         }
 
-        /* Hint bar */
         #hint {
             position: fixed;
-            bottom: 24px;
+            bottom: 28px;
             left: 50%;
             transform: translateX(-50%);
-            background: linear-gradient(135deg, rgba(102,126,234,0.92) 0%, rgba(118,75,162,0.92) 100%);
-            color: #fff;
-            padding: 12px 22px;
-            border-radius: 25px;
-            font-size: 15px;
+            background: rgba(15,12,41,0.85);
+            color: #a78bfa;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
             z-index: 999;
             text-align: center;
-            font-weight: 500;
-            box-shadow: 0 4px 18px rgba(0,0,0,0.35);
-            white-space: nowrap;
+            font-weight: 600;
+            border: 1px solid rgba(167,139,250,0.3);
+            backdrop-filter: blur(10px);
             pointer-events: none;
+            letter-spacing: 0.3px;
         }
 
-        /* Controls panel */
-        #controls {
+        /* Vignette overlay for depth feel */
+        #vignette {
             position: fixed;
-            top: 16px;
-            right: 16px;
-            background: rgba(0,0,0,0.72);
-            color: #fff;
-            padding: 14px 16px;
-            border-radius: 12px;
-            font-size: 13px;
-            z-index: 999;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 3;
             pointer-events: none;
+            background: radial-gradient(ellipse at center,
+                transparent 50%,
+                rgba(0,0,0,0.55) 100%);
         }
-        .control-item {
-            margin-bottom: 7px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .control-item:last-child { margin-bottom: 0; }
 
-        /* Error / status toast */
-        #status-toast {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(220,53,69,0.93);
-            color: #fff;
-            padding: 14px 24px;
-            border-radius: 10px;
-            font-size: 15px;
-            z-index: 10000;
-            text-align: center;
-            display: none;
-            max-width: 88vw;
-            box-shadow: 0 4px 18px rgba(0,0,0,0.4);
-        }
-        #status-toast.success { background: rgba(25,135,84,0.93); }
-
-        /* Gesture indicator */
-        #gesture-badge {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.75);
-            color: #00ff88;
-            font-size: 20px;
-            font-weight: bold;
-            padding: 14px 28px;
-            border-radius: 14px;
-            z-index: 998;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-        }
-        #gesture-badge.show { opacity: 1; }
-
-        /* Camera permission button */
         #cam-btn {
             position: fixed;
-            bottom: 80px;
-            left: 50%;
+            bottom: 80px; left: 50%;
             transform: translateX(-50%);
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: #fff;
@@ -190,208 +115,210 @@
             cursor: pointer;
             z-index: 9998;
             display: none;
-            box-shadow: 0 4px 18px rgba(0,0,0,0.3);
         }
-        #cam-btn:active { transform: translateX(-50%) scale(0.97); }
     </style>
 </head>
 <body>
 
-    <!-- Loading Screen -->
     <div id="loading-screen">
         <div class="spinner"></div>
-        <div id="loading-text">🚀 AR Menu Loading...</div>
-        <div id="loading-subtext">Starting camera & AR scene...</div>
+        <div id="loading-text">✨ AR Menu Loading...</div>
+        <div id="loading-subtext">Preparing your experience...</div>
     </div>
 
-    <!-- Status Toast -->
-    <div id="status-toast"></div>
+    <!-- Vignette for depth -->
+    <div id="vignette"></div>
 
-    <!-- Gesture Badge -->
-    <div id="gesture-badge"></div>
-
-    <!-- LAYER 1: Camera video feed -->
     <video id="camera-video" autoplay muted playsinline></video>
+    <button id="cam-btn" onclick="window.arApp && window.arApp.requestCameraManually()">📷 Enable Camera</button>
 
-    <!-- Manual camera start button (fallback) -->
-    <button id="cam-btn" onclick="window.arApp && window.arApp.requestCameraManually()">
-        📷 Tap to Enable Camera
-    </button>
-
-    <!-- LAYER 2: A-Frame AR scene (transparent) -->
     <a-scene
         id="ar-scene"
         vr-mode-ui="enabled: false"
-        renderer="antialias: true; alpha: true; logarithmicDepthBuffer: true;"
+        renderer="antialias: true; alpha: true; logarithmicDepthBuffer: true; shadowMapEnabled: true;"
         background="color: transparent"
         embedded>
 
         <a-assets timeout="15000">
-            <img id="menu-image" src="./menu-image.jpg" crossorigin="anonymous">
+            <img id="menu-image"
+                src="https://raw.githubusercontent.com/UmangGhoghari/mine-insta-AR/main/menu-image.jpg"
+                crossorigin="anonymous">
         </a-assets>
 
-        <!-- Entity camera - no look controls, locked -->
         <a-entity camera position="0 0 0" look-controls="enabled: false"></a-entity>
 
-        <!-- Main menu image card -->
+        <!-- Ambient light — soft base -->
+        <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
+
+        <!-- Key light from top-left — creates depth shadow -->
+        <a-light type="directional"
+            color="#e8d5ff"
+            intensity="1.2"
+            position="-2 4 -1"
+            cast-shadow="true">
+        </a-light>
+
+        <!-- Rim light from right — edge glow feel -->
+        <a-light type="point"
+            color="#7c3aed"
+            intensity="1.5"
+            position="3 1 -1.5"
+            distance="8">
+        </a-light>
+
+        <!-- Back fill light — depth -->
+        <a-light type="point"
+            color="#1d4ed8"
+            intensity="0.8"
+            position="-3 -1 -3"
+            distance="8">
+        </a-light>
+
+        <!-- SHADOW PLANE — fake shadow neeche floor pe -->
+        <a-plane
+            id="shadow-plane"
+            position="0 -1.2 -2.2"
+            rotation="-90 0 0"
+            width="1.8" height="0.5"
+            material="color: #000; opacity: 0.35; transparent: true; shader: flat;"
+            animation__shadow="property: scale; from: 1 1 1; to: 0.92 0.92 1; dir: alternate; dur: 3200; easing: easeInOutSine; loop: true">
+        </a-plane>
+
+        <!-- GLOW BEHIND CARD — bloom effect fake -->
+        <a-plane
+            id="glow-bg"
+            position="0 0 -2.35"
+            width="1.7" height="2.3"
+            material="color: #7c3aed; opacity: 0.18; transparent: true; shader: flat; side: double;">
+        </a-plane>
+
+        <!-- MAIN MENU CARD -->
         <a-image
             id="menu-card"
             src="#menu-image"
             position="0 0 -2.2"
             width="1.4"
             height="1.9"
-            material="transparent: false; shader: flat;"
-            animation__float="property: position; from: 0 -0.05 -2.2; to: 0 0.05 -2.2; dir: alternate; dur: 3200; easing: easeInOutSine; loop: true">
+            material="transparent: false; shader: flat; side: front;"
+
+            animation__float="property: position;
+                from: 0 -0.06 -2.2;
+                to: 0 0.06 -2.2;
+                dir: alternate;
+                dur: 3000;
+                easing: easeInOutSine;
+                loop: true"
+
+            animation__tiltY="property: rotation;
+                from: -2 -6 0;
+                to: 2 6 0;
+                dir: alternate;
+                dur: 4500;
+                easing: easeInOutSine;
+                loop: true"
+
+            animation__scaleBreath="property: scale;
+                from: 1 1 1;
+                to: 1.015 1.015 1;
+                dir: alternate;
+                dur: 3000;
+                easing: easeInOutSine;
+                loop: true">
         </a-image>
 
-        <!-- Gesture feedback text in 3D space -->
-        <a-entity id="gesture-text-3d" position="0 1.4 -2.2" visible="false">
-            <a-text id="gesture-text-val"
-                value="Gesture!"
-                color="#00ff88"
-                width="5"
-                align="center"
-                font="mozillavr"
-                scale="0.7 0.7 0.7">
-            </a-text>
-        </a-entity>
+        <!-- EDGE GLOW BORDER — white thin border for card depth -->
+        <a-plane
+            id="card-border"
+            position="0 0 -2.21"
+            width="1.45" height="1.95"
+            material="color: #ffffff; opacity: 0.12; transparent: true; shader: flat;"
+            animation__float2="property: position;
+                from: 0 -0.06 -2.21;
+                to: 0 0.06 -2.21;
+                dir: alternate;
+                dur: 3000;
+                easing: easeInOutSine;
+                loop: true"
+            animation__tiltY2="property: rotation;
+                from: -2 -6 0;
+                to: 2 6 0;
+                dir: alternate;
+                dur: 4500;
+                easing: easeInOutSine;
+                loop: true">
+        </a-plane>
 
     </a-scene>
 
-    <!-- LAYER 3: UI controls -->
-    <div id="controls">
-        <div class="control-item"><span>👆</span><span>Keys 1–4 / drag</span></div>
-        <div class="control-item"><span>🖱️</span><span>Drag to move</span></div>
-        <div class="control-item"><span>⚙️</span><span>Scroll to zoom</span></div>
-        <div class="control-item"><span>🔄</span><span>Key R to reset</span></div>
-    </div>
-
-    <div id="hint">📋 AR Menu Active! Drag the card, scroll to zoom!</div>
+    <div id="hint">✨ Drag to move &nbsp;|&nbsp; Pinch to zoom</div>
 
     <script>
-    // ─── Transparent A-Frame Renderer Fix ───────────────────────────────────────
-    // Hook into A-Frame BEFORE the scene initializes so we can patch the WebGL
-    // clear color to transparent (0,0,0,0) — this is the key fix for the white screen.
     AFRAME.registerComponent('transparent-bg', {
         init: function () {
             const renderer = this.el.renderer;
             if (renderer) {
-                renderer.setClearColor(0x000000, 0);   // alpha = 0 → fully transparent
+                renderer.setClearColor(0x000000, 0);
                 renderer.autoClear = true;
             }
         }
     });
 
-    // ─── Main AR App ─────────────────────────────────────────────────────────────
     class ARMenuApp {
         constructor() {
-            this.scene       = document.getElementById('ar-scene');
-            this.menuCard    = document.getElementById('menu-card');
-            this.video       = document.getElementById('camera-video');
-            this.loadingEl   = document.getElementById('loading-screen');
-            this.toast       = document.getElementById('status-toast');
-            this.badge       = document.getElementById('gesture-badge');
-            this.camBtn      = document.getElementById('cam-btn');
-            this.gestureText = document.getElementById('gesture-text-3d');
-            this.gestureVal  = document.getElementById('gesture-text-val');
+            this.scene     = document.getElementById('ar-scene');
+            this.menuCard  = document.getElementById('menu-card');
+            this.glowBg    = document.getElementById('glow-bg');
+            this.shadow    = document.getElementById('shadow-plane');
+            this.border    = document.getElementById('card-border');
+            this.video     = document.getElementById('camera-video');
+            this.loadingEl = document.getElementById('loading-screen');
+            this.camBtn    = document.getElementById('cam-btn');
 
-            this.stream       = null;
-            this.isDragging   = false;
-            this.prevMouse    = { x: 0, y: 0 };
-            this.prevTouch    = null;
-            this.pinchDist    = null;
+            this.isDragging = false;
+            this.prevMouse  = { x: 0, y: 0 };
+            this.prevTouch  = null;
+            this.pinchDist  = null;
 
             window.arApp = this;
             this.init();
         }
 
         async init() {
-            // Add transparent-bg component to scene
             this.scene.setAttribute('transparent-bg', '');
-
-            // Also patch renderer after scene loads as a safety net
-            this.scene.addEventListener('loaded', () => {
-                this.patchRenderer();
-                console.log('[AR] Scene loaded OK');
-            });
-
-            // Attempt camera
-            const cameraOk = await this.startCamera();
-
-            if (!cameraOk) {
-                // Show manual button
-                this.camBtn.style.display = 'block';
-            }
-
+            this.scene.addEventListener('loaded', () => this.patchRenderer());
+            const ok = await this.startCamera();
+            if (!ok) this.camBtn.style.display = 'block';
             this.setupControls();
             this.hideLoading();
         }
 
-        // ── Patch Three.js / A-Frame renderer for transparent canvas ──────────
         patchRenderer() {
             try {
-                const renderer = this.scene.renderer;
-                if (renderer) {
-                    renderer.setClearColor(0x000000, 0);
-                    renderer.setClearAlpha(0);
-                    console.log('[AR] Renderer patched – canvas transparent');
-                }
-                // Also try through Three.js scene
-                if (this.scene.object3D) {
-                    this.scene.object3D.background = null;
-                }
-            } catch(e) {
-                console.warn('[AR] Renderer patch error:', e);
-            }
+                const r = this.scene.renderer;
+                if (r) { r.setClearColor(0x000000, 0); r.setClearAlpha(0); }
+                if (this.scene.object3D) this.scene.object3D.background = null;
+            } catch(e) {}
         }
 
-        // ── Camera ────────────────────────────────────────────────────────────
         async startCamera() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                this.showToast('⚠️ Camera API not available in this browser.', false);
-                return false;
-            }
-
+            if (!navigator.mediaDevices?.getUserMedia) return false;
             const constraints = [
-                // Try back camera first (best for AR)
                 { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-                // Fallback: any camera
-                { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-                // Minimal fallback
                 { video: true, audio: false }
             ];
-
-            for (const constraint of constraints) {
+            for (const c of constraints) {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia(constraint);
-                    this.stream = stream;
+                    const stream = await navigator.mediaDevices.getUserMedia(c);
                     this.video.srcObject = stream;
-
-                    await new Promise((resolve, reject) => {
-                        const t = setTimeout(() => resolve(), 4000); // timeout ok
-                        this.video.onloadedmetadata = () => { clearTimeout(t); resolve(); };
-                        this.video.onerror = (e) => { clearTimeout(t); reject(e); };
+                    await new Promise(res => {
+                        const t = setTimeout(res, 4000);
+                        this.video.onloadedmetadata = () => { clearTimeout(t); res(); };
                     });
-
-                    await this.video.play().catch(() => {
-                        console.warn('[AR] Autoplay blocked – waiting for user gesture');
-                    });
-
-                    console.log('[AR] Camera started:', stream.getVideoTracks()[0]?.label);
-                    this.showToast('📷 Camera ready!', true);
-                    setTimeout(() => this.hideToast(), 2500);
+                    await this.video.play().catch(() => {});
                     return true;
-
-                } catch (err) {
-                    console.warn('[AR] Camera attempt failed:', err.name, err.message);
-                }
+                } catch(e) { console.warn(e); }
             }
-
-            // All attempts failed
-            if (this.stream === null) {
-                this.showToast('📷 Camera blocked. Tap the button below to try again.', false);
-                return false;
-            }
+            return false;
         }
 
         async requestCameraManually() {
@@ -400,49 +327,34 @@
             if (!ok) this.camBtn.style.display = 'block';
         }
 
-        // ── Keyboard, mouse, touch controls ──────────────────────────────────
+        // Sync glow + shadow position with card
+        syncHelpers() {
+            const pos = this.menuCard.getAttribute('position');
+            const rot = this.menuCard.getAttribute('rotation');
+            if (this.glowBg) this.glowBg.setAttribute('position', { x: pos.x, y: pos.y, z: pos.z - 0.15 });
+            if (this.border) this.border.setAttribute('position', { x: pos.x, y: pos.y, z: pos.z + 0.01 });
+            if (this.shadow) this.shadow.setAttribute('position', { x: pos.x, y: pos.y - 1.1, z: pos.z });
+        }
+
         setupControls() {
-            // ── Keyboard shortcuts
-            document.addEventListener('keydown', (e) => {
-                switch(e.key.toLowerCase()) {
-                    case '1': this.moveCard(-0.15, 0, 0); this.showBadge('⬅️ Move Left');  break;
-                    case '2': this.moveCard( 0.15, 0, 0); this.showBadge('➡️ Move Right'); break;
-                    case '3': this.scaleCard(1.12);        this.showBadge('🔍 Zoom In');   break;
-                    case '4': this.scaleCard(0.88);        this.showBadge('🔎 Zoom Out');  break;
-                    case 'r': this.resetCard();             this.showBadge('🔄 Reset');     break;
-                    case 'arrowleft':  this.rotateCard(-10); this.showBadge('↩️ Rotate L'); break;
-                    case 'arrowright': this.rotateCard( 10); this.showBadge('↪️ Rotate R'); break;
-                }
-            });
-
-            // ── Mouse drag on the scene canvas
-            const canvas = this.scene.canvas || document.querySelector('a-scene canvas') || document;
-
-            const getEventTarget = () => document;
-
-            getEventTarget().addEventListener('mousedown', (e) => {
+            document.addEventListener('mousedown', (e) => {
                 this.isDragging = true;
                 this.prevMouse = { x: e.clientX, y: e.clientY };
             });
-
-            getEventTarget().addEventListener('mousemove', (e) => {
+            document.addEventListener('mousemove', (e) => {
                 if (!this.isDragging) return;
                 const dx = e.clientX - this.prevMouse.x;
                 const dy = e.clientY - this.prevMouse.y;
-                this.moveCard(dx * 0.006, -dy * 0.006, 0);
+                this.moveCard(dx * 0.005, -dy * 0.005, 0);
                 this.prevMouse = { x: e.clientX, y: e.clientY };
             });
+            document.addEventListener('mouseup', () => this.isDragging = false);
 
-            getEventTarget().addEventListener('mouseup',   () => { this.isDragging = false; });
-            getEventTarget().addEventListener('mouseleave',() => { this.isDragging = false; });
-
-            // ── Mouse wheel zoom
             document.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 this.scaleCard(e.deltaY > 0 ? 0.93 : 1.07);
             }, { passive: false });
 
-            // ── Touch drag (mobile)
             document.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 1) {
                     this.prevTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -457,14 +369,12 @@
                 if (e.touches.length === 1 && this.prevTouch) {
                     const dx = e.touches[0].clientX - this.prevTouch.x;
                     const dy = e.touches[0].clientY - this.prevTouch.y;
-                    this.moveCard(dx * 0.006, -dy * 0.006, 0);
+                    this.moveCard(dx * 0.005, -dy * 0.005, 0);
                     this.prevTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
                 } else if (e.touches.length === 2 && this.pinchDist !== null) {
                     const newDist = this.getTouchDist(e.touches);
-                    const factor = newDist / this.pinchDist;
-                    // clamp factor to avoid wild jumps
-                    const clamped = Math.max(0.85, Math.min(1.15, factor));
-                    this.scaleCard(clamped);
+                    const factor = Math.max(0.85, Math.min(1.15, newDist / this.pinchDist));
+                    this.scaleCard(factor);
                     this.pinchDist = newDist;
                 }
                 e.preventDefault();
@@ -479,78 +389,43 @@
         getTouchDist(touches) {
             const dx = touches[0].clientX - touches[1].clientX;
             const dy = touches[0].clientY - touches[1].clientY;
-            return Math.sqrt(dx*dx + dy*dy);
+            return Math.sqrt(dx * dx + dy * dy);
         }
 
-        // ── Card manipulation helpers ─────────────────────────────────────────
         moveCard(x, y, z) {
             const pos = this.menuCard.getAttribute('position');
-            this.menuCard.setAttribute('position', {
-                x: pos.x + x,
-                y: pos.y + y,
-                z: pos.z + z
-            });
+            this.menuCard.setAttribute('position', { x: pos.x + x, y: pos.y + y, z: pos.z + z });
+            this.syncHelpers();
         }
 
         scaleCard(factor) {
-            let s = this.menuCard.getAttribute('scale') || { x: 1, y: 1, z: 1 };
-            const nx = Math.max(0.2, Math.min(4, s.x * factor));
-            const ny = Math.max(0.2, Math.min(4, s.y * factor));
+            const s = this.menuCard.getAttribute('scale') || { x: 1, y: 1, z: 1 };
+            const nx = Math.max(0.3, Math.min(4, s.x * factor));
+            const ny = Math.max(0.3, Math.min(4, s.y * factor));
             this.menuCard.setAttribute('scale', { x: nx, y: ny, z: 1 });
-        }
-
-        rotateCard(deg) {
-            const rot = this.menuCard.getAttribute('rotation');
-            this.menuCard.setAttribute('rotation', { x: rot.x, y: rot.y + deg, z: rot.z });
+            if (this.glowBg) this.glowBg.setAttribute('scale', { x: nx * 1.08, y: ny * 1.08, z: 1 });
+            if (this.border) this.border.setAttribute('scale', { x: nx * 1.03, y: ny * 1.03, z: 1 });
         }
 
         resetCard() {
             this.menuCard.setAttribute('position', '0 0 -2.2');
             this.menuCard.setAttribute('rotation', '0 0 0');
-            this.menuCard.setAttribute('scale',    '1 1 1');
-        }
-
-        // ── UI helpers ────────────────────────────────────────────────────────
-        showBadge(text) {
-            this.badge.textContent = text;
-            this.badge.classList.add('show');
-            clearTimeout(this._badgeTimer);
-            this._badgeTimer = setTimeout(() => this.badge.classList.remove('show'), 1800);
-        }
-
-        showToast(msg, success = false) {
-            this.toast.textContent = msg;
-            this.toast.className   = success ? 'success' : '';
-            this.toast.style.display = 'block';
-        }
-
-        hideToast() {
-            this.toast.style.display = 'none';
+            this.menuCard.setAttribute('scale', '1 1 1');
+            this.syncHelpers();
         }
 
         hideLoading() {
-            setTimeout(() => {
-                this.loadingEl.classList.add('hidden');
-            }, 900);
+            setTimeout(() => this.loadingEl.classList.add('hidden'), 1200);
         }
     }
 
-    // ── Boot ──────────────────────────────────────────────────────────────────
-    // Wait for A-Frame to be ready before we boot the app
     function boot() {
-        // Ensure A-Frame custom element is defined before booting
-        if (typeof AFRAME !== 'undefined') {
-            new ARMenuApp();
-        } else {
-            window.addEventListener('load', () => new ARMenuApp());
-        }
+        if (typeof AFRAME !== 'undefined') new ARMenuApp();
+        else window.addEventListener('load', () => new ARMenuApp());
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', boot);
-    } else {
-        boot();
-    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
     </script>
 
 </body>
